@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neuro-Sling: Citadel Defense</title>
+    <title>Neuro-Sling: Normalized Scaling</title>
     <style>
         body { margin: 0; background: #87CEEB; font-family: sans-serif; overflow: hidden; touch-action: none; }
         canvas { display: block; width: 100vw; height: 100vh; }
@@ -11,13 +11,13 @@
         #quiz-box, #victory-box {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 15px; border-radius: 12px; text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 90%; max-width: 380px; z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 80%; max-width: 350px; z-index: 100;
         }
 
         #rotate-notice {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #2196F3; color: white; z-index: 999; flex-direction: column;
-            justify-content: center; align-items: center; text-align: center;
+            justify-content: center; align-items: center; text-align: center; padding: 20px;
         }
 
         @media (orientation: portrait) {
@@ -31,7 +31,7 @@
 
         #ui { 
             position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: bold; 
-            background: rgba(255,255,255,0.7); padding: 5px 10px; border-radius: 5px; 
+            background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 5px; pointer-events: none;
         }
 
         .hidden { display: none !important; }
@@ -40,19 +40,20 @@
 <body>
 
     <div id="rotate-notice">
-        <h1>Please Rotate Your Device</h1>
-        <p>This game is best played in Landscape mode.</p>
+        <h2>Please Rotate to Landscape</h2>
+        <p>The neuro-citadel requires more horizontal space!</p>
     </div>
 
     <div id="ui">Integrity: <span id="block-count">0</span> | Ammo: <span id="ammo-name">-</span></div>
 
     <div id="quiz-box">
-        <h2 id="question">Neuro-Sling Academy</h2>
+        <h2 id="question">Anatomy & Physiology Defense</h2>
         <div id="options"><button onclick="startDefense()">Start Game</button></div>
     </div>
 
     <div id="victory-box" class="hidden">
         <h1 style="color:#4CAF50">VICTORY!</h1>
+        <p>The King's tower has fallen.</p>
         <button onclick="location.reload()">Play Again</button>
     </div>
 
@@ -63,56 +64,53 @@
         const ctx = canvas.getContext('2d');
         const quizBox = document.getElementById('quiz-box');
         
-        let screenW, screenH, scale;
+        let W, H, S; // Width, Height, Scale
         let slingPos = { x: 0, y: 0 }, mousePos = { x: 0, y: 0 };
         let blocks = [], ammo = null, particles = [], gameActive = true;
         let king = { x: 0, y: 0, r: 0, vy: 0 };
 
-        function resize() {
-            screenW = window.innerWidth;
-            screenH = window.innerHeight;
-            canvas.width = screenW;
-            canvas.height = screenH;
+        function setupSizing() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W;
+            canvas.height = H;
             
-            // Base scale on a "standard" height of 500px
-            scale = Math.max(0.5, screenH / 500);
+            // Dynamic scale factor based on screen height to prevent overlay
+            S = Math.min(W / 800, H / 450); 
             
-            slingPos.x = screenW * 0.15;
-            slingPos.y = screenH - (80 * scale);
-            king.r = 25 * scale;
+            // Anchor Slingshot to the left 15%
+            slingPos.x = W * 0.15;
+            slingPos.y = H - (100 * S);
+            king.r = 22 * S;
 
             if (blocks.length === 0) initCitadel();
         }
 
         const CELL_TYPES = {
-            OLIGO: { name: "Oligodendrocyte", r: 18, color: "#9c27b0", shape: "spider", power: 0.15 },
-            ASTRO: { name: "Astrocyte", r: 15, color: "#ff9800", shape: "star", power: 0.18 },
-            MICRO: { name: "Microglia", r: 12, color: "#f44336", shape: "pulse", power: 0.24 }
+            OLIGO: { name: "Oligodendrocyte", r: 18, color: "#9c27b0", power: 0.14 },
+            ASTRO: { name: "Astrocyte", r: 15, color: "#ff9800", power: 0.17 },
+            MICRO: { name: "Microglia", r: 12, color: "#f44336", power: 0.22 }
         };
 
         const questionPool = [
             { q: "Which cell creates myelin in the CNS?", a: ["Astrocyte", "Oligodendrocyte", "Microglia"], c: 1, type: "OLIGO" },
             { q: "The primary excitatory neurotransmitter is:", a: ["GABA", "Glutamate", "Glycine"], c: 1, type: "ASTRO" },
-            { q: "Which lobe is responsible for vision?", a: ["Frontal", "Occipital", "Parietal"], c: 1, type: "ASTRO" },
             { q: "Immune defense in the brain is provided by:", a: ["Microglia", "Schwann Cells", "Ependymal"], c: 0, type: "MICRO" },
-            { q: "Action potentials are triggered by an influx of:", a: ["Sodium", "Potassium", "Chloride"], c: 0, type: "OLIGO" },
             { q: "Which cell forms the Blood-Brain Barrier?", a: ["Ependymal", "Astrocyte", "Oligodendrocyte"], c: 1, type: "ASTRO" },
-            { q: "CSF is produced by the:", a: ["Choroid Plexus", "Dura Mater", "Pia Mater"], c: 0, type: "ASTRO" },
-            { q: "The emotional center of the brain is the:", a: ["Amygdala", "Cerebellum", "Basal Ganglia"], c: 0, type: "MICRO" },
-            { q: "The 'Rest and Digest' system is:", a: ["Sympathetic", "Parasympathetic", "Somatic"], c: 1, type: "OLIGO" },
-            { q: "Damage to Broca's area affects:", a: ["Hearing", "Speech Production", "Memory"], c: 1, type: "MICRO" }
+            { q: "CSF is produced by the:", a: ["Choroid Plexus", "Dura Mater", "Pia Mater"], c: 0, type: "ASTRO" }
         ];
 
         function initCitadel() {
             blocks = [];
             const cols = 2, layers = 5;
-            const bW = 40 * scale, bH = 45 * scale;
-            const startX = screenW - (screenW * 0.25);
+            const bW = 45 * S, bH = 50 * S;
+            // Anchor Citadel to the right 80%
+            const startX = W * 0.75; 
             for(let i=0; i<layers; i++) {
                 for(let j=0; j<cols; j++) {
                     blocks.push({ 
                         x: startX + (j * (bW + 5)), 
-                        y: (screenH - 50) - (bH + 2) - (i * (bH + 2)), 
+                        y: (H - 50) - (bH + 2) - (i * (bH + 2)), 
                         w: bW, h: bH, alive: true, col: j 
                     });
                 }
@@ -127,11 +125,11 @@
             ];
             const targetCol = counts[0] <= counts[1] ? 0 : 1;
             const colBlocks = blocks.filter(b => b.col === targetCol && b.alive);
-            const highestY = colBlocks.length > 0 ? Math.min(...colBlocks.map(b => b.y)) : screenH - 50;
-            const bW = 40 * scale, bH = 45 * scale;
+            const highestY = colBlocks.length > 0 ? Math.min(...colBlocks.map(b => b.y)) : H - 50;
+            const bW = 45 * S, bH = 50 * S;
 
             blocks.push({ 
-                x: (screenW - (screenW * 0.25)) + (targetCol * (bW + 5)), 
+                x: (W * 0.75) + (targetCol * (bW + 5)), 
                 y: highestY - (bH + 2), 
                 w: bW, h: bH, alive: true, col: targetCol 
             });
@@ -154,7 +152,6 @@
                         ammo = { x: slingPos.x, y: slingPos.y, vx:0, vy:0, active:false, type: CELL_TYPES[data.type] };
                         document.getElementById('ammo-name').innerText = ammo.type.name;
                     } else { 
-                        alert("Incorrect! The tower grows!");
                         restoreBlock();
                         nextQuestion();
                     }
@@ -164,15 +161,17 @@
         }
 
         function update() {
-            ctx.clearRect(0, 0, screenW, screenH);
-            ctx.fillStyle = "#5d4037"; ctx.fillRect(0, screenH - 50, screenW, 50);
+            ctx.clearRect(0, 0, W, H);
             
-            // Draw Sling
-            ctx.strokeStyle = "#3e2723"; ctx.lineWidth = 6 * scale; ctx.beginPath();
-            ctx.moveTo(slingPos.x, screenH - 50); ctx.lineTo(slingPos.x, slingPos.y + (10 * scale)); ctx.stroke();
+            // Ground
+            ctx.fillStyle = "#5d4037"; ctx.fillRect(0, H - 50, W, 50);
+            
+            // Slingshot
+            ctx.strokeStyle = "#3e2723"; ctx.lineWidth = 8 * S; ctx.beginPath();
+            ctx.moveTo(slingPos.x, H - 50); ctx.lineTo(slingPos.x, slingPos.y + (20 * S)); ctx.stroke();
 
-            // Block Physics
-            let topY = screenH; let topBlock = null;
+            // Blocks
+            let topY = H; let topBlock = null;
             blocks.forEach(b => {
                 if(b.alive) {
                     ctx.fillStyle = "#78909c"; ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -181,26 +180,27 @@
                 }
             });
 
-            // King logic
+            // King
             if(topBlock) {
                 king.x = topBlock.x + (topBlock.w / 2);
-                if(king.y < topBlock.y - (20 * scale)) { king.vy += 0.2; king.y += king.vy; }
-                else { king.y = topBlock.y - (20 * scale); king.vy = 0; }
+                if(king.y < topBlock.y - (20 * S)) { king.vy += 0.2; king.y += king.vy; }
+                else { king.y = topBlock.y - (20 * S); king.vy = 0; }
             } else { king.vy += 0.2; king.y += king.vy; }
 
             if (gameActive) {
                 ctx.fillStyle = "#9c27b0"; ctx.beginPath(); ctx.arc(king.x, king.y, king.r, 0, 7); ctx.fill();
-                if(king.y > screenH - 60) {
+                if(king.y > H - 70) {
                     gameActive = false;
                     document.getElementById('victory-box').classList.remove('hidden');
                 }
             }
 
-            // Ammo logic
+            // Ammo
             if(ammo && gameActive) {
                 if(isDragging) {
-                    ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.beginPath();
+                    ctx.setLineDash([5, 5]); ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.beginPath();
                     ctx.moveTo(slingPos.x, slingPos.y); ctx.lineTo(mousePos.x, mousePos.y); ctx.stroke();
+                    ctx.setLineDash([]);
                     drawCell(ammo.type, mousePos.x, mousePos.y);
                 } else if(ammo.active) {
                     ammo.vy += 0.2; ammo.x += ammo.vx; ammo.y += ammo.vy;
@@ -210,46 +210,47 @@
                             b.alive = false; updateUI();
                         }
                     });
-                    if(ammo.y > screenH || ammo.x > screenW) { ammo = null; setTimeout(nextQuestion, 600); }
+                    if(ammo.y > H || ammo.x > W) { ammo = null; setTimeout(nextQuestion, 600); }
                 } else { drawCell(ammo.type, slingPos.x, slingPos.y); }
             }
             requestAnimationFrame(update);
         }
 
         function drawCell(type, x, y) {
-            ctx.fillStyle = type.color; ctx.beginPath();
-            ctx.arc(x, y, type.r * scale, 0, 7); ctx.fill();
+            ctx.fillStyle = type.color; ctx.strokeStyle = "white"; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(x, y, type.r * S, 0, 7); ctx.fill(); ctx.stroke();
         }
 
         function updateUI() { document.getElementById('block-count').innerText = blocks.filter(b => b.alive).length; }
 
-        // Interaction
         let isDragging = false;
-        const startDrag = (e) => { if(!ammo || ammo.active) return; isDragging = true; };
-        const moveDrag = (e) => {
-            if(!isDragging) return;
+        const getPos = (e) => {
             const t = e.touches ? e.touches[0] : e;
-            mousePos = { x: t.clientX, y: t.clientY };
+            return { x: t.clientX, y: t.clientY };
         };
-        const endDrag = () => {
-            if(!isDragging) return;
-            isDragging = false;
+
+        canvas.addEventListener('mousedown', () => { if(ammo && !ammo.active) isDragging = true; });
+        window.addEventListener('mousemove', (e) => { if(isDragging) mousePos = getPos(e); });
+        window.addEventListener('mouseup', () => {
+            if(!isDragging) return; isDragging = false;
             ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
             ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
             ammo.active = true;
-        };
+        });
 
-        canvas.addEventListener('mousedown', startDrag);
-        window.addEventListener('mousemove', moveDrag);
-        window.addEventListener('mouseup', endDrag);
-        canvas.addEventListener('touchstart', startDrag);
-        window.addEventListener('touchmove', moveDrag);
-        window.addEventListener('touchend', endDrag);
+        canvas.addEventListener('touchstart', (e) => { if(ammo && !ammo.active) isDragging = true; mousePos = getPos(e); });
+        window.addEventListener('touchmove', (e) => { if(isDragging) mousePos = getPos(e); });
+        window.addEventListener('touchend', () => {
+            if(!isDragging) return; isDragging = false;
+            ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
+            ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
+            ammo.active = true;
+        });
 
         function startDefense() { quizBox.classList.add('hidden'); nextQuestion(); }
 
-        window.addEventListener('resize', resize);
-        resize(); update();
+        window.addEventListener('resize', setupSizing);
+        setupSizing(); update();
     </script>
 </body>
 </html>
