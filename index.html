@@ -47,7 +47,7 @@
         const victoryBox = document.getElementById('victory-box');
 
         const VW = 1000, VH = 600;
-        let scale = 1, gameStatus = "MENU"; // MENU, SETTLING, PLAYING, WON
+        let scale = 1, gameStatus = "MENU"; 
         
         const GRAVITY = 0.22;
         const CELL_TYPES = {
@@ -58,15 +58,40 @@
 
         const questionPool = [
             { q: "Which meningeal layer is in direct contact with brain tissue?", a: ["Dura mater", "Arachnoid mater", "Pia mater"], c: 2, type: "OLIGO" },
-            { q: "The subarachnoid space contains:", a: ["Blood", "CSF", "Air"], c: 1, type: "ASTRO" },
-            { q: "Which cell maintains the Blood-Brain Barrier?", a: ["Astrocyte", "Microglia", "Neuron"], c: 0, type: "ASTRO" },
-            { q: "Which cell produces myelin in the CNS?", a: ["Schwann", "Oligodendrocyte", "Astrocyte"], c: 1, type: "OLIGO" },
-            { q: "The primary motor cortex is in which lobe?", a: ["Frontal", "Parietal", "Occipital"], c: 0, type: "ASTRO" }
+            { q: "The subarachnoid space is located between:", a: ["Dura and Arachnoid", "Arachnoid and Pia", "Pia and Grey Matter"], c: 1, type: "ASTRO" },
+            { q: "Which layer forms the tough, fibrous outer covering of the CNS?", a: ["Dura mater", "Pia mater", "Periosteum"], c: 0, type: "MICRO" },
+            { q: "Which cell produces CSF in the choroid plexus?", a: ["Microglia", "Astrocyte", "Ependymal cell"], c: 2, type: "ASTRO" },
+            { q: "Which cell maintains the Blood-Brain Barrier (BBB)?", a: ["Astrocyte", "Oligodendrocyte", "Schwann cell"], c: 0, type: "ASTRO" },
+            { q: "Phagocytic cells that act as brain immune defense are:", a: ["Satellite cells", "Microglia", "Ependymal cells"], c: 1, type: "MICRO" },
+            { q: "Oligodendrocytes myelinate axons in the:", a: ["CNS", "PNS", "Enteric System"], c: 0, type: "OLIGO" },
+            { q: "Neurons with one axon and many dendrites are:", a: ["Bipolar", "Unipolar", "Multipolar"], c: 2, type: "OLIGO" },
+            { q: "Sensory neurons in dorsal root ganglia are typically:", a: ["Pseudounipolar", "Multipolar", "Anaxonic"], c: 0, type: "MICRO" },
+            { q: "The 'Fight or Flight' response is governed by the:", a: ["Parasympathetic", "Sympathetic", "Somatic"], c: 1, type: "MICRO" },
+            { q: "Cranial nerves and spinal nerves are part of the:", a: ["CNS", "PNS", "Autonomic Only"], c: 1, type: "OLIGO" },
+            { q: "How many pairs of spinal nerves are in the human body?", a: ["12", "31", "33"], c: 1, type: "ASTRO" },
+            { q: "Cranial Nerve X (10), which wanders to the thorax, is the:", a: ["Vagus", "Trigeminal", "Abducens"], c: 0, type: "MICRO" },
+            { q: "Which cranial nerve is responsible for vision?", a: ["Olfactory (I)", "Optic (II)", "Oculomotor (III)"], c: 1, type: "OLIGO" },
+            { q: "The Trigeminal nerve (V) is primarily responsible for:", a: ["Eye movement", "Facial sensation", "Hearing"], c: 1, type: "ASTRO" },
+            { q: "The primary motor cortex is located in which lobe?", a: ["Frontal", "Parietal", "Occipital"], c: 0, type: "ASTRO" },
+            { q: "The postcentral gyrus contains the:", a: ["Motor cortex", "Somatosensory cortex", "Visual cortex"], c: 1, type: "ASTRO" },
+            { q: "Which structure connects the left and right hemispheres?", a: ["Thalamus", "Corpus Callosum", "Pons"], c: 1, type: "OLIGO" },
+            { q: "The 'folds' on the brain surface are called:", a: ["Gyri", "Sulci", "Fissures"], c: 0, type: "MICRO" },
+            { q: "The shallow grooves between folds are called:", a: ["Gyri", "Sulci", "Ventricles"], c: 1, type: "ASTRO" },
+            { q: "Where is CSF primarily reabsorbed into the blood?", a: ["Choroid plexus", "Arachnoid villi", "Central canal"], c: 1, type: "OLIGO" },
+            { q: "Which ventricle is located between the cerebellar hemispheres?", a: ["Lateral", "Third", "Fourth"], c: 2, type: "MICRO" },
+            { q: "CSF flows from the 3rd to 4th ventricle via the:", a: ["Interventricular foramen", "Cerebral aqueduct", "Median aperture"], c: 1, type: "ASTRO" },
+            { q: "In the spinal cord, white matter is located:", a: ["Internally (H-shape)", "Externally", "Only in the center"], c: 1, type: "OLIGO" },
+            { q: "The tapered end of the spinal cord (L1/L2) is the:", a: ["Cauda equina", "Conus medullaris", "Filum terminale"], c: 1, type: "MICRO" },
+            { q: "Which system is 'Rest and Digest'?", a: ["Sympathetic", "Parasympathetic", "Somatic"], c: 1, type: "ASTRO" },
+            { q: "The area of the brain responsible for speech production:", a: ["Wernicke's", "Broca's", "Insula"], c: 1, type: "MICRO" },
+            { q: "The lobe responsible for auditory processing:", a: ["Frontal", "Temporal", "Occipital"], c: 1, type: "OLIGO" },
+            { q: "What ions move IN to trigger an action potential?", a: ["Potassium", "Sodium", "Chloride"], c: 1, type: "ASTRO" },
+            { q: "Which cranial nerve moves the tongue?", a: ["Glossopharyngeal", "Hypoglossal", "Accessory"], c: 1, type: "MICRO" }
         ];
 
         let blocks = [], particles = [], ammo = null, shuffleDeck = [];
         let isDragging = false, mousePos = {x:0, y:0};
-        let king = { x: 0, y: -100, r: 35, vy: 0 };
+        let king = { x: 0, y: -200, r: 35, vy: 0 };
         const slingPos = { x: 180, y: VH - 180 };
 
         function resize() {
@@ -92,7 +117,7 @@
         function resetGame() { location.reload(); }
 
         function initCitadel() {
-            blocks = []; king.y = -100; king.vy = 0;
+            blocks = []; king.y = -200; king.vy = 0;
             for(let i=0; i<5; i++) {
                 for(let j=0; j<2; j++) {
                     blocks.push({ x: VW-250+(j*65), y: -100 - (i*60), w: 55, h: 55, alive: true, col: j });
@@ -111,11 +136,13 @@
         function nextQuestion() {
             if (gameStatus !== "PLAYING") return;
             if (shuffleDeck.length === 0) shuffleDeck = [...questionPool].sort(() => Math.random() - 0.5);
+            
             quizBox.classList.remove('hidden');
             const data = shuffleDeck.pop();
             document.getElementById('question').innerText = data.q;
             const opts = document.getElementById('options');
             opts.innerHTML = '';
+            
             data.a.forEach((ans, i) => {
                 const btn = document.createElement('button');
                 btn.innerText = ans;
@@ -213,58 +240,4 @@
                 if(isDragging) {
                     ctx.beginPath(); ctx.setLineDash([5, 5]); ctx.strokeStyle = "white";
                     let px = slingPos.x, py = slingPos.y, pvx = (slingPos.x-mousePos.x)*ammo.type.power, pvy = (slingPos.y-mousePos.y)*ammo.type.power;
-                    for(let i=0; i<30; i++) { ctx.lineTo(px, py); pvy+=GRAVITY; px+=pvx; py+=pvy; }
-                    ctx.stroke(); ctx.setLineDash([]);
-                    drawCell(ammo.type, mousePos.x, mousePos.y, false);
-                } else if(ammo.active) {
-                    ammo.vy += GRAVITY; ammo.x += ammo.vx; ammo.y += ammo.vy;
-                    drawCell(ammo.type, ammo.x, ammo.y, true);
-                    blocks.forEach(b => {
-                        if(b.alive && ammo.x > b.x && ammo.x < b.x+b.w && ammo.y > b.y && ammo.y < b.y+b.h) { b.alive = false; updateUI(); }
-                    });
-                    if(ammo.y > VH || ammo.x > VW || ammo.x < 0) { ammo = null; setTimeout(nextQuestion, 600); }
-                } else { drawCell(ammo.type, slingPos.x, slingPos.y, false); }
-            }
-
-            particles.forEach((p, i) => {
-                p.x += p.vx; p.y += p.vy; p.vy += 0.2;
-                ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size);
-                if(p.y > VH) particles.splice(i,1);
-            });
-
-            ctx.restore();
-            requestAnimationFrame(update);
-        }
-
-        canvas.addEventListener('mousedown', e => {
-            if(gameStatus !== "PLAYING" || !ammo) return;
-            const p = toVirtual(e.clientX, e.clientY);
-            if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 60) isDragging = true;
-        });
-        window.addEventListener('mousemove', e => { if(isDragging) mousePos = toVirtual(e.clientX, e.clientY); });
-        window.addEventListener('mouseup', () => {
-            if(!isDragging) return; isDragging = false;
-            ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
-            ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
-            ammo.active = true;
-        });
-        // Same for touch...
-        canvas.addEventListener('touchstart', e => {
-            if(gameStatus !== "PLAYING" || !ammo) return;
-            const p = toVirtual(e.touches[0].clientX, e.touches[0].clientY);
-            if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 60) isDragging = true;
-        });
-        window.addEventListener('touchmove', e => { if(isDragging) mousePos = toVirtual(e.touches[0].clientX, e.touches[0].clientY); });
-        window.addEventListener('touchend', () => {
-            if(!isDragging) return; isDragging = false;
-            ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
-            ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
-            ammo.active = true;
-        });
-
-        function updateUI() { document.getElementById('block-count').innerText = blocks.filter(b=>b.alive).length; }
-        window.addEventListener('resize', resize);
-        resize(); update();
-    </script>
-</body>
-</html>
+                    for(let i=0; i<30; i++) { ctx.lineTo(px, py); pvy+=
