@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neuro-Sling: Normalized Scaling</title>
+    <title>Neuro-Sling: Citadel Defense Pro</title>
     <style>
-        body { margin: 0; background: #87CEEB; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        body { margin: 0; background: #87CEEB; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; touch-action: none; }
         canvas { display: block; width: 100vw; height: 100vh; }
         
         #quiz-box, #victory-box {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: white; padding: 15px; border-radius: 12px; text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 80%; max-width: 350px; z-index: 100;
+            background: white; padding: 20px; border-radius: 20px; text-align: center;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3); width: 85%; max-width: 400px; z-index: 100;
         }
 
         #rotate-notice {
@@ -20,41 +20,39 @@
             justify-content: center; align-items: center; text-align: center; padding: 20px;
         }
 
-        @media (orientation: portrait) {
-            #rotate-notice { display: flex; }
-        }
+        @media (orientation: portrait) { #rotate-notice { display: flex; } }
 
         button { 
-            width: 100%; padding: 12px; margin: 5px 0; border: none; 
-            border-radius: 8px; background: #2196F3; color: white; font-size: 16px; font-weight: bold; 
-        }
-
-        #ui { 
-            position: absolute; top: 10px; left: 10px; font-size: 12px; font-weight: bold; 
-            background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 5px; pointer-events: none;
+            width: 100%; padding: 14px; margin: 8px 0; border: none; 
+            border-radius: 12px; background: #2196F3; color: white; font-size: 17px; font-weight: bold; cursor: pointer;
         }
 
         .hidden { display: none !important; }
+        #ui { position: absolute; top: 15px; left: 15px; font-size: 14px; font-weight: bold; pointer-events: none; background: rgba(255,255,255,0.7); padding: 10px; border-radius: 10px; }
+        #victory-box h1 { color: #4CAF50; margin-top: 0; }
     </style>
 </head>
 <body>
 
     <div id="rotate-notice">
-        <h2>Please Rotate to Landscape</h2>
-        <p>The neuro-citadel requires more horizontal space!</p>
+        <h2>Rotate for Battle!</h2>
+        <p>Please switch to Landscape mode to see the full battlefield.</p>
     </div>
 
-    <div id="ui">Integrity: <span id="block-count">0</span> | Ammo: <span id="ammo-name">-</span></div>
+    <div id="ui">
+        Citadel Integrity: <span id="block-count">0</span><br>
+        Ammo: <span id="ammo-name">Awaiting Answer</span>
+    </div>
 
     <div id="quiz-box">
-        <h2 id="question">Anatomy & Physiology Defense</h2>
-        <div id="options"><button onclick="startDefense()">Start Game</button></div>
+        <h2 id="question">Neuro-Sling Academy</h2>
+        <div id="options"><button onclick="startDefense()">Initialize Defense</button></div>
     </div>
 
     <div id="victory-box" class="hidden">
-        <h1 style="color:#4CAF50">VICTORY!</h1>
-        <p>The King's tower has fallen.</p>
-        <button onclick="location.reload()">Play Again</button>
+        <h1>VICTORY!</h1>
+        <p>The King's citadel has been dismantled by your knowledge.</p>
+        <button onclick="resetGame()">Play Again</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -63,11 +61,30 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const quizBox = document.getElementById('quiz-box');
-        
+        const victoryBox = document.getElementById('victory-box');
+
         let W, H, S; // Width, Height, Scale
         let slingPos = { x: 0, y: 0 }, mousePos = { x: 0, y: 0 };
-        let blocks = [], ammo = null, particles = [], gameActive = true;
+        let shuffleDeck = [], particles = [], gameActive = true;
+        let ammo = null, blocks = [], isDragging = false;
         let king = { x: 0, y: 0, r: 0, vy: 0 };
+
+        const GRAVITY = 0.22;
+        const CELL_TYPES = {
+            OLIGO: { name: "Oligodendrocyte", r: 24, color: "#9c27b0", shape: "spider", power: 0.13 },
+            ASTRO: { name: "Astrocyte", r: 20, color: "#ff9800", shape: "star", power: 0.17 },
+            MICRO: { name: "Microglia", r: 15, color: "#f44336", shape: "pulse", power: 0.23 }
+        };
+
+        const questionPool = [
+            { q: "Which meningeal layer is in direct contact with the brain tissue?", a: ["Dura mater", "Arachnoid mater", "Pia mater"], c: 2, type: "OLIGO" },
+            { q: "Which cell produces CSF in the choroid plexus?", a: ["Microglia", "Astrocyte", "Ependymal cell"], c: 2, type: "ASTRO" },
+            { q: "Which cell maintains the Blood-Brain Barrier (BBB)?", a: ["Astrocyte", "Oligodendrocyte", "Schwann cell"], c: 0, type: "ASTRO" },
+            { q: "Neurons with one axon and many dendrites are:", a: ["Bipolar", "Unipolar", "Multipolar"], c: 2, type: "OLIGO" },
+            { q: "Cranial Nerve X (10), which wanders to the thorax, is the:", a: ["Vagus", "Trigeminal", "Abducens"], c: 0, type: "MICRO" },
+            { q: "The primary motor cortex is located in which lobe?", a: ["Frontal", "Parietal", "Occipital"], c: 0, type: "ASTRO" },
+            { q: "Which structure connects the left and right hemispheres?", a: ["Thalamus", "Corpus Callosum", "Pons"], c: 1, type: "OLIGO" }
+        ];
 
         function setupSizing() {
             W = window.innerWidth;
@@ -75,42 +92,26 @@
             canvas.width = W;
             canvas.height = H;
             
-            // Dynamic scale factor based on screen height to prevent overlay
-            S = Math.min(W / 800, H / 450); 
+            // S acts as a multiplier for all sizes (S=1 for desktop, S~0.6 for phones)
+            S = Math.min(W / 1000, H / 500); 
             
-            // Anchor Slingshot to the left 15%
-            slingPos.x = W * 0.15;
-            slingPos.y = H - (100 * S);
-            king.r = 22 * S;
+            slingPos.x = W * 0.15; // Anchor at 15% width
+            slingPos.y = H - (150 * S);
+            king.r = 35 * S;
 
             if (blocks.length === 0) initCitadel();
         }
 
-        const CELL_TYPES = {
-            OLIGO: { name: "Oligodendrocyte", r: 18, color: "#9c27b0", power: 0.14 },
-            ASTRO: { name: "Astrocyte", r: 15, color: "#ff9800", power: 0.17 },
-            MICRO: { name: "Microglia", r: 12, color: "#f44336", power: 0.22 }
-        };
-
-        const questionPool = [
-            { q: "Which cell creates myelin in the CNS?", a: ["Astrocyte", "Oligodendrocyte", "Microglia"], c: 1, type: "OLIGO" },
-            { q: "The primary excitatory neurotransmitter is:", a: ["GABA", "Glutamate", "Glycine"], c: 1, type: "ASTRO" },
-            { q: "Immune defense in the brain is provided by:", a: ["Microglia", "Schwann Cells", "Ependymal"], c: 0, type: "MICRO" },
-            { q: "Which cell forms the Blood-Brain Barrier?", a: ["Ependymal", "Astrocyte", "Oligodendrocyte"], c: 1, type: "ASTRO" },
-            { q: "CSF is produced by the:", a: ["Choroid Plexus", "Dura Mater", "Pia Mater"], c: 0, type: "ASTRO" }
-        ];
-
         function initCitadel() {
-            blocks = [];
+            blocks = []; king.vy = 0;
             const cols = 2, layers = 5;
-            const bW = 45 * S, bH = 50 * S;
-            // Anchor Citadel to the right 80%
-            const startX = W * 0.75; 
+            const bW = 50 * S, bH = 55 * S;
+            const startX = W * 0.75; // Anchor at 75% width
             for(let i=0; i<layers; i++) {
                 for(let j=0; j<cols; j++) {
                     blocks.push({ 
-                        x: startX + (j * (bW + 5)), 
-                        y: (H - 50) - (bH + 2) - (i * (bH + 2)), 
+                        x: startX + (j * (bW + 10 * S)), 
+                        y: H - 110 * S - (i * (bH + 5 * S)), 
                         w: bW, h: bH, alive: true, col: j 
                     });
                 }
@@ -126,51 +127,64 @@
             const targetCol = counts[0] <= counts[1] ? 0 : 1;
             const colBlocks = blocks.filter(b => b.col === targetCol && b.alive);
             const highestY = colBlocks.length > 0 ? Math.min(...colBlocks.map(b => b.y)) : H - 50;
-            const bW = 45 * S, bH = 50 * S;
+            const bW = 50 * S, bH = 55 * S;
 
             blocks.push({ 
-                x: (W * 0.75) + (targetCol * (bW + 5)), 
-                y: highestY - (bH + 2), 
+                x: (W * 0.75) + (targetCol * (bW + 10 * S)), 
+                y: highestY - (bH + 5 * S), 
                 w: bW, h: bH, alive: true, col: targetCol 
             });
             updateUI();
         }
 
-        function nextQuestion() {
-            if (!gameActive) return;
-            const data = questionPool[Math.floor(Math.random() * questionPool.length)];
-            quizBox.classList.remove('hidden');
-            document.getElementById('question').innerText = data.q;
-            const opts = document.getElementById('options');
-            opts.innerHTML = '';
-            data.a.forEach((ans, i) => {
-                const btn = document.createElement('button');
-                btn.innerText = ans;
-                btn.onclick = () => {
-                    if(i === data.c) {
-                        quizBox.classList.add('hidden');
-                        ammo = { x: slingPos.x, y: slingPos.y, vx:0, vy:0, active:false, type: CELL_TYPES[data.type] };
-                        document.getElementById('ammo-name').innerText = ammo.type.name;
-                    } else { 
-                        restoreBlock();
-                        nextQuestion();
-                    }
-                };
-                opts.appendChild(btn);
-            });
+        function drawCell(type, x, y, isAngry) {
+            ctx.fillStyle = type.color; ctx.strokeStyle = "white"; ctx.lineWidth = 2;
+            ctx.beginPath();
+            const r = type.r * S;
+            if(type.shape === "spider") {
+                for(let i=0; i<8; i++) {
+                    let a = (i/8)*Math.PI*2 + (isAngry ? Date.now()*0.01 : 0);
+                    ctx.lineTo(x + Math.cos(a)*r*1.4, y + Math.sin(a)*r*1.4); ctx.lineTo(x, y);
+                }
+            } else if(type.shape === "star") {
+                for(let i=0; i<10; i++) {
+                    let a = (i/10)*Math.PI*2; let radius = i%2===0 ? r : r/2;
+                    ctx.lineTo(x + Math.cos(a)*radius, y + Math.sin(a)*radius);
+                }
+            } else { ctx.arc(x, y, r, 0, Math.PI*2); }
+            ctx.fill(); ctx.stroke();
+
+            // Eyes
+            ctx.fillStyle = "black";
+            ctx.beginPath(); ctx.arc(x - r/3, y - r/5, r/6, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(x + r/3, y - r/5, r/6, 0, 7); ctx.fill();
+        }
+
+        function drawKing(k) {
+            ctx.fillStyle = "#9c27b0"; ctx.beginPath(); ctx.arc(k.x, k.y, k.r, 0, 7); ctx.fill();
+            ctx.fillStyle = "gold"; ctx.fillRect(k.x - 15 * S, k.y - 45 * S, 30 * S, 15 * S);
+            ctx.strokeStyle = "white"; ctx.lineWidth = 3 * S; ctx.beginPath(); ctx.arc(k.x, k.y + k.r/3, k.r/4, 3.8, 5.6); ctx.stroke();
+        }
+
+        function drawPrediction(vx, vy) {
+            ctx.beginPath(); ctx.setLineDash([5, 8]); ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+            let px = slingPos.x, py = slingPos.y, pvx = vx, pvy = vy;
+            for(let i=0; i<40; i++) {
+                ctx.lineTo(px, py); pvy += GRAVITY; px += pvx; py += pvy;
+                if(py > H - 50) break;
+            }
+            ctx.stroke(); ctx.setLineDash([]);
         }
 
         function update() {
             ctx.clearRect(0, 0, W, H);
-            
-            // Ground
             ctx.fillStyle = "#5d4037"; ctx.fillRect(0, H - 50, W, 50);
             
             // Slingshot
-            ctx.strokeStyle = "#3e2723"; ctx.lineWidth = 8 * S; ctx.beginPath();
-            ctx.moveTo(slingPos.x, H - 50); ctx.lineTo(slingPos.x, slingPos.y + (20 * S)); ctx.stroke();
+            ctx.strokeStyle = "#3e2723"; ctx.lineWidth = 10 * S; ctx.beginPath();
+            ctx.moveTo(slingPos.x, H - 50); ctx.lineTo(slingPos.x, slingPos.y + 20 * S); ctx.stroke();
 
-            // Blocks
+            // Block Physics & Drawing
             let topY = H; let topBlock = null;
             blocks.forEach(b => {
                 if(b.alive) {
@@ -180,77 +194,113 @@
                 }
             });
 
-            // King
+            // King logic
             if(topBlock) {
                 king.x = topBlock.x + (topBlock.w / 2);
-                if(king.y < topBlock.y - (20 * S)) { king.vy += 0.2; king.y += king.vy; }
-                else { king.y = topBlock.y - (20 * S); king.vy = 0; }
-            } else { king.vy += 0.2; king.y += king.vy; }
+                if(king.y < topBlock.y - 45 * S) { king.vy += GRAVITY; king.y += king.vy; }
+                else { king.y = topBlock.y - 45 * S; king.vy = 0; }
+            } else { king.vy += GRAVITY; king.y += king.vy; }
 
             if (gameActive) {
-                ctx.fillStyle = "#9c27b0"; ctx.beginPath(); ctx.arc(king.x, king.y, king.r, 0, 7); ctx.fill();
-                if(king.y > H - 70) {
-                    gameActive = false;
-                    document.getElementById('victory-box').classList.remove('hidden');
-                }
+                drawKing(king);
+                if(king.y >= H - 85 * S) triggerExplosion();
             }
 
             // Ammo
             if(ammo && gameActive) {
                 if(isDragging) {
-                    ctx.setLineDash([5, 5]); ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.beginPath();
+                    let vx = (slingPos.x - mousePos.x) * ammo.type.power;
+                    let vy = (slingPos.y - mousePos.y) * ammo.type.power;
+                    drawPrediction(vx, vy);
+                    ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.beginPath();
                     ctx.moveTo(slingPos.x, slingPos.y); ctx.lineTo(mousePos.x, mousePos.y); ctx.stroke();
-                    ctx.setLineDash([]);
-                    drawCell(ammo.type, mousePos.x, mousePos.y);
+                    drawCell(ammo.type, mousePos.x, mousePos.y, false);
                 } else if(ammo.active) {
-                    ammo.vy += 0.2; ammo.x += ammo.vx; ammo.y += ammo.vy;
-                    drawCell(ammo.type, ammo.x, ammo.y);
+                    ammo.vy += GRAVITY; ammo.x += ammo.vx; ammo.y += ammo.vy;
+                    drawCell(ammo.type, ammo.x, ammo.y, true);
                     blocks.forEach(b => {
                         if(b.alive && ammo.x > b.x && ammo.x < b.x+b.w && ammo.y > b.y && ammo.y < b.y+b.h) {
                             b.alive = false; updateUI();
                         }
                     });
-                    if(ammo.y > H || ammo.x > W) { ammo = null; setTimeout(nextQuestion, 600); }
-                } else { drawCell(ammo.type, slingPos.x, slingPos.y); }
+                    if(ammo.y > H || ammo.x > W || ammo.x < 0) {
+                        ammo = null; setTimeout(nextQuestion, 600);
+                    }
+                } else { drawCell(ammo.type, slingPos.x, slingPos.y, false); }
             }
+
+            // Particles
+            particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.vy += 0.1;
+                ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size);
+                if(p.y > H) particles.splice(i, 1);
+            });
+
             requestAnimationFrame(update);
         }
 
-        function drawCell(type, x, y) {
-            ctx.fillStyle = type.color; ctx.strokeStyle = "white"; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(x, y, type.r * S, 0, 7); ctx.fill(); ctx.stroke();
+        // Shared Input Logic
+        function handleStart(ex, ey) { if(gameActive && ammo && !ammo.launched) { isDragging = true; mousePos = {x: ex, y: ey}; } }
+        function handleMove(ex, ey) { if(isDragging) mousePos = {x: ex, y: ey}; }
+        function handleEnd() {
+            if(!isDragging) return;
+            isDragging = false;
+            ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
+            ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
+            ammo.launched = true; ammo.active = true;
         }
 
-        function updateUI() { document.getElementById('block-count').innerText = blocks.filter(b => b.alive).length; }
-
-        let isDragging = false;
-        const getPos = (e) => {
-            const t = e.touches ? e.touches[0] : e;
-            return { x: t.clientX, y: t.clientY };
-        };
-
-        canvas.addEventListener('mousedown', () => { if(ammo && !ammo.active) isDragging = true; });
-        window.addEventListener('mousemove', (e) => { if(isDragging) mousePos = getPos(e); });
-        window.addEventListener('mouseup', () => {
-            if(!isDragging) return; isDragging = false;
-            ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
-            ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
-            ammo.active = true;
-        });
-
-        canvas.addEventListener('touchstart', (e) => { if(ammo && !ammo.active) isDragging = true; mousePos = getPos(e); });
-        window.addEventListener('touchmove', (e) => { if(isDragging) mousePos = getPos(e); });
-        window.addEventListener('touchend', () => {
-            if(!isDragging) return; isDragging = false;
-            ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
-            ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
-            ammo.active = true;
-        });
+        canvas.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
+        window.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('touchstart', e => handleStart(e.touches[0].clientX, e.touches[0].clientY));
+        canvas.addEventListener('touchmove', e => handleMove(e.touches[0].clientX, e.touches[0].clientY));
+        window.addEventListener('touchend', handleEnd);
 
         function startDefense() { quizBox.classList.add('hidden'); nextQuestion(); }
+        function resetGame() { location.reload(); }
+        function updateUI() { document.getElementById('block-count').innerText = blocks.filter(b => b.alive).length; }
+        
+        function nextQuestion() {
+            if (!gameActive) return;
+            if (shuffleDeck.length === 0) shuffleDeck = [...questionPool].sort(() => Math.random() - 0.5);
+            quizBox.classList.remove('hidden');
+            const data = shuffleDeck.pop();
+            document.getElementById('question').innerText = data.q;
+            const opts = document.getElementById('options');
+            opts.innerHTML = '';
+            data.a.forEach((ans, i) => {
+                const btn = document.createElement('button');
+                btn.innerText = ans;
+                btn.onclick = () => {
+                    if(i === data.c) {
+                        quizBox.classList.add('hidden');
+                        ammo = { x: slingPos.x, y: slingPos.y, vx:0, vy:0, active:false, launched:false, type: CELL_TYPES[data.type] };
+                        document.getElementById('ammo-name').innerText = ammo.type.name;
+                    } else {
+                        restoreBlock();
+                        nextQuestion();
+                    }
+                };
+                opts.appendChild(btn);
+            });
+        }
+
+        function triggerExplosion() {
+            gameActive = false;
+            for(let i=0; i<80; i++) {
+                particles.push({
+                    x: king.x, y: king.y,
+                    vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15,
+                    size: Math.random() * 8 + 2, color: `hsl(${Math.random() * 360}, 80%, 60%)`
+                });
+            }
+            setTimeout(() => { victoryBox.classList.remove('hidden'); }, 1200);
+        }
 
         window.addEventListener('resize', setupSizing);
-        setupSizing(); update();
+        setupSizing();
+        update();
     </script>
 </body>
 </html>
