@@ -5,19 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Neuro-Sling: Citadel Defense Pro</title>
     <style>
-        body { margin: 0; background: #87CEEB; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; }
+        body { margin: 0; background: #87CEEB; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; touch-action: none; }
         canvas { display: block; }
         #quiz-box, #victory-box {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 25px; border-radius: 20px; text-align: center;
-            box-shadow: 0 15px 50px rgba(0,0,0,0.3); width: 85%; max-width: 400px; z-index: 100;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3); width: 85%; max-width: 450px; z-index: 100;
         }
         button { 
-            width: 100%; padding: 15px; margin: 8px 0; border: none; 
+            width: 100%; padding: 16px; margin: 10px 0; border: none; 
             border-radius: 12px; background: #2196F3; color: white; font-size: 18px; font-weight: bold; cursor: pointer;
         }
         .hidden { display: none !important; }
         #ui { position: absolute; top: 15px; left: 15px; font-weight: bold; pointer-events: none; background: rgba(255,255,255,0.8); padding: 10px; border-radius: 10px; border: 2px solid #2196F3; }
+        #victory-box h1 { color: #4CAF50; margin-top: 0; }
     </style>
 </head>
 <body>
@@ -29,13 +30,13 @@
 
     <div id="quiz-box">
         <h2 id="question">Neuro-Sling Academy</h2>
-        <div id="options"><button onclick="startGame()">Start Mission</button></div>
+        <div id="options"><button onclick="startDefense()">Initialize Defense</button></div>
     </div>
 
     <div id="victory-box" class="hidden">
-        <h1 style="color:#4CAF50">MISSION SUCCESS</h1>
-        <p>The King has been dethroned!</p>
-        <button onclick="resetGame()">Re-deploy</button>
+        <h1>VICTORY!</h1>
+        <p>The King's citadel has been dismantled by your knowledge.</p>
+        <button onclick="resetGame()">Play Again</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -47,27 +48,27 @@
         const victoryBox = document.getElementById('victory-box');
 
         const VW = 1000, VH = 600;
-        let scale = 1, gameStatus = "START"; // START, PLAYING, EXPLODING, WON
+        let scale = 1, gameActive = true;
         
         const GRAVITY = 0.22;
         const CELL_TYPES = {
-            OLIGO: { name: "Oligodendrocyte", r: 22, color: "#9c27b0", shape: "spider", power: 0.14 },
-            ASTRO: { name: "Astrocyte", r: 20, color: "#ff9800", shape: "star", power: 0.18 },
-            MICRO: { name: "Microglia", r: 16, color: "#f44336", shape: "pulse", power: 0.24 }
+            OLIGO: { name: "Oligodendrocyte", r: 24, color: "#9c27b0", shape: "spider", power: 0.14 },
+            ASTRO: { name: "Astrocyte", r: 22, color: "#ff9800", shape: "star", power: 0.18 },
+            MICRO: { name: "Microglia", r: 18, color: "#f44336", shape: "pulse", power: 0.24 }
         };
 
         const questionPool = [
-            { q: "Which meningeal layer is in direct contact with the brain?", a: ["Dura", "Arachnoid", "Pia"], c: 2, type: "OLIGO" },
+            { q: "Which meningeal layer is in direct contact with brain tissue?", a: ["Dura mater", "Arachnoid mater", "Pia mater"], c: 2, type: "OLIGO" },
             { q: "The subarachnoid space contains:", a: ["Blood", "CSF", "Air"], c: 1, type: "ASTRO" },
             { q: "Which cell maintains the Blood-Brain Barrier?", a: ["Astrocyte", "Microglia", "Neuron"], c: 0, type: "ASTRO" },
-            { q: "Which cell produces myelin in the CNS?", a: ["Schwann", "Oligodendrocyte", "Astrocyte"], c: 1, type: "OLIGO" },
-            { q: "Phagocytic immune cells of the brain:", a: ["Microglia", "Ependymal", "Satellite"], c: 0, type: "MICRO" }
+            { q: "The postcentral gyrus contains the:", a: ["Motor cortex", "Somatosensory cortex", "Visual cortex"], c: 1, type: "ASTRO" },
+            { q: "Cranial Nerve X (10), which wanders to the thorax, is the:", a: ["Vagus", "Trigeminal", "Abducens"], c: 0, type: "MICRO" }
         ];
 
         let blocks = [], particles = [], ammo = null, shuffleDeck = [];
         let isDragging = false, mousePos = {x:0, y:0};
-        let king = { x: 0, y: 0, r: 30, vy: 0 };
-        const slingPos = { x: 150, y: VH - 180 };
+        let king = { x: 0, y: 0, r: 35, vy: 0 };
+        const slingPos = { x: 180, y: VH - 180 };
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -82,31 +83,34 @@
             };
         }
 
-        function startGame() {
-            gameStatus = "PLAYING";
+        function startDefense() {
+            gameActive = true;
             quizBox.classList.add('hidden');
-            initLevel();
+            initCitadel();
             nextQuestion();
         }
 
-        function resetGame() {
-            location.reload(); // Hard reset to ensure all loops stop
-        }
+        function resetGame() { location.reload(); }
 
-        function initLevel() {
-            blocks = [];
-            particles = [];
-            king.vy = 0;
+        function initCitadel() {
+            blocks = []; king.vy = 0;
             for(let i=0; i<5; i++) {
                 for(let j=0; j<2; j++) {
-                    blocks.push({ x: VW-250+(j*65), y: -100 - (i*60), w: 55, h: 55, alive: true, col: j });
+                    blocks.push({ x: VW-250+(j*65), y: VH - 110 - (i*60), w: 55, h: 55, alive: true, col: j });
                 }
             }
             updateUI();
         }
 
+        function restoreBlock() {
+            const counts = [blocks.filter(b=>b.col===0 && b.alive).length, blocks.filter(b=>b.col===1 && b.alive).length];
+            const col = counts[0] <= counts[1] ? 0 : 1;
+            blocks.push({ x: VW-250+(col*65), y: -100, w: 55, h: 55, alive: true, col: col });
+            updateUI();
+        }
+
         function nextQuestion() {
-            if (gameStatus !== "PLAYING") return;
+            if (!gameActive) return;
             if (shuffleDeck.length === 0) shuffleDeck = [...questionPool].sort(() => Math.random() - 0.5);
             
             quizBox.classList.remove('hidden');
@@ -124,7 +128,7 @@
                         ammo = { x: slingPos.x, y: slingPos.y, vx:0, vy:0, active:false, type: CELL_TYPES[data.type] };
                         document.getElementById('ammo-name').innerText = ammo.type.name;
                     } else {
-                        addReinforcement();
+                        restoreBlock();
                         nextQuestion();
                     }
                 };
@@ -132,15 +136,48 @@
             });
         }
 
-        function addReinforcement() {
-            const counts = [blocks.filter(b=>b.col===0 && b.alive).length, blocks.filter(b=>b.col===1 && b.alive).length];
-            const col = counts[0] <= counts[1] ? 0 : 1;
-            blocks.push({ x: VW-250+(col*65), y: -50, w: 55, h: 55, alive: true, col: col });
-            updateUI();
+        function drawCell(type, x, y, isAngry) {
+            ctx.fillStyle = type.color; ctx.strokeStyle = "white"; ctx.lineWidth = 2;
+            ctx.beginPath();
+            if(type.shape === "spider") {
+                for(let i=0; i<8; i++) {
+                    let a = (i/8)*Math.PI*2 + (isAngry ? Date.now()*0.02 : 0);
+                    ctx.lineTo(x + Math.cos(a)*type.r*1.4, y + Math.sin(a)*type.r*1.4); ctx.lineTo(x, y);
+                }
+            } else if(type.shape === "star") {
+                for(let i=0; i<10; i++) {
+                    let a = (i/10)*Math.PI*2; let r = i%2===0 ? type.r : type.r/2;
+                    ctx.lineTo(x + Math.cos(a)*r, y + Math.sin(a)*r);
+                }
+            } else { ctx.arc(x, y, type.r, 0, 7); }
+            ctx.fill(); ctx.stroke();
+
+            // Eyes
+            const r = type.r;
+            ctx.fillStyle = "black";
+            ctx.beginPath(); ctx.arc(x - r/3, y - r/5, r/6, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(x + r/3, y - r/5, r/6, 0, 7); ctx.fill();
+            if(isAngry) {
+                ctx.strokeStyle = "black"; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(x - r/2, y - r/2); ctx.lineTo(x - r/10, y - r/4); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x + r/2, y - r/2); ctx.lineTo(x + r/10, y - r/4); ctx.stroke();
+            }
+        }
+
+        function drawKing(k) {
+            ctx.fillStyle = "#9c27b0"; ctx.beginPath(); ctx.arc(k.x, k.y, k.r, 0, 7); ctx.fill();
+            ctx.fillStyle = "gold"; ctx.fillRect(k.x-15, k.y-45, 30, 15);
+            ctx.fillStyle = "white";
+            ctx.beginPath(); ctx.arc(k.x - 10, k.y - 5, 8, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(k.x + 10, k.y - 5, 8, 0, 7); ctx.fill();
+            ctx.fillStyle = "black";
+            ctx.beginPath(); ctx.arc(k.x - 10, k.y - 5, 3, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(k.x + 10, k.y - 5, 3, 0, 7); ctx.fill();
+            ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(k.x, k.y+10, 10, 3.5, 5.8); ctx.stroke();
         }
 
         function triggerExplosion() {
-            gameStatus = "EXPLODING";
+            gameActive = false;
             for(let i=0; i<80; i++) {
                 particles.push({
                     x: king.x, y: king.y,
@@ -148,10 +185,7 @@
                     size: Math.random()*5+2, color: `hsl(${Math.random()*360}, 70%, 60%)`
                 });
             }
-            setTimeout(() => { 
-                gameStatus = "WON";
-                victoryBox.classList.remove('hidden'); 
-            }, 1200);
+            setTimeout(() => { victoryBox.classList.remove('hidden'); }, 1200);
         }
 
         function update() {
@@ -161,8 +195,8 @@
             ctx.scale(scale, scale);
 
             // Scenery
-            ctx.fillStyle = "#4caf50"; ctx.fillRect(-500, VH-50, VW+1000, 500); // Ground
-            ctx.strokeStyle = "#3e2723"; ctx.lineWidth = 10; ctx.beginPath();
+            ctx.fillStyle = "#5d4037"; ctx.fillRect(-500, VH-50, VW+1000, 500); 
+            ctx.strokeStyle = "#3e2723"; ctx.lineWidth = 8; ctx.beginPath();
             ctx.moveTo(slingPos.x, VH-50); ctx.lineTo(slingPos.x, slingPos.y+20); ctx.stroke();
 
             // Block Physics
@@ -171,46 +205,41 @@
                 const colBlocks = blocks.filter(bl => bl.col === b.col && bl.alive).sort((a,b) => b.y - a.y);
                 const targetY = VH - 105 - (colBlocks.indexOf(b)*58);
                 if(b.y < targetY) b.y += 8; else b.y = targetY;
-                
                 ctx.fillStyle = "#78909c"; ctx.fillRect(b.x, b.y, b.w, b.h);
-                ctx.strokeStyle = "#263238"; ctx.lineWidth = 2; ctx.strokeRect(b.x, b.y, b.w, b.h);
+                ctx.strokeStyle = "#263238"; ctx.strokeRect(b.x, b.y, b.w, b.h);
             });
 
-            // King Logic
+            // King
             const top = blocks.filter(b=>b.alive).sort((a,b)=>a.y-b.y)[0];
             if(top) {
                 king.x = top.x + 27;
-                if(king.y < top.y - 35) { king.vy += GRAVITY; king.y += king.vy; }
-                else { king.y = top.y - 35; king.vy = 0; }
-            } else {
-                king.vy += GRAVITY; king.y += king.vy;
-            }
+                if(king.y < top.y - 40) { king.vy += GRAVITY; king.y += king.vy; }
+                else { king.y = top.y - 40; king.vy = 0; }
+            } else { king.vy += GRAVITY; king.y += king.vy; }
 
-            if(gameStatus === "PLAYING" || gameStatus === "EXPLODING") {
-                // Draw King
-                ctx.fillStyle = "#9c27b0"; ctx.beginPath(); ctx.arc(king.x, king.y, king.r, 0, 7); ctx.fill();
-                ctx.fillStyle = "gold"; ctx.fillRect(king.x-10, king.y-40, 20, 10); // Simple crown
-                if(gameStatus === "PLAYING" && king.y > VH-80) triggerExplosion();
+            if(gameActive) {
+                drawKing(king);
+                if(king.y > VH-85) triggerExplosion();
             }
 
             // Ammo
-            if(ammo && gameStatus === "PLAYING") {
+            if(ammo && gameActive) {
                 if(isDragging) {
-                    ctx.strokeStyle = "#3e2723"; ctx.lineWidth = 3; ctx.beginPath();
-                    ctx.moveTo(slingPos.x, slingPos.y); ctx.lineTo(mousePos.x, mousePos.y); ctx.stroke();
-                    drawCell(ammo.type, mousePos.x, mousePos.y);
+                    ctx.beginPath(); ctx.setLineDash([5, 5]); ctx.strokeStyle = "white";
+                    let px = slingPos.x, py = slingPos.y, pvx = (slingPos.x-mousePos.x)*ammo.type.power, pvy = (slingPos.y-mousePos.y)*ammo.type.power;
+                    for(let i=0; i<30; i++) { ctx.lineTo(px, py); pvy+=GRAVITY; px+=pvx; py+=pvy; }
+                    ctx.stroke(); ctx.setLineDash([]);
+                    drawCell(ammo.type, mousePos.x, mousePos.y, false);
                 } else if(ammo.active) {
                     ammo.vy += GRAVITY; ammo.x += ammo.vx; ammo.y += ammo.vy;
-                    drawCell(ammo.type, ammo.x, ammo.y);
+                    drawCell(ammo.type, ammo.x, ammo.y, true);
                     blocks.forEach(b => {
                         if(b.alive && ammo.x > b.x && ammo.x < b.x+b.w && ammo.y > b.y && ammo.y < b.y+b.h) {
                             b.alive = false; updateUI();
                         }
                     });
                     if(ammo.y > VH || ammo.x > VW || ammo.x < 0) { ammo = null; setTimeout(nextQuestion, 600); }
-                } else {
-                    drawCell(ammo.type, slingPos.x, slingPos.y);
-                }
+                } else { drawCell(ammo.type, slingPos.x, slingPos.y, false); }
             }
 
             particles.forEach((p, i) => {
@@ -223,46 +252,27 @@
             requestAnimationFrame(update);
         }
 
-        function drawCell(t, x, y) {
-            ctx.fillStyle = t.color; ctx.beginPath();
-            if(t.shape === "star") {
-                for(let i=0; i<10; i++) {
-                    let r = i%2===0 ? t.r : t.r/2;
-                    ctx.lineTo(x + Math.cos(i*0.62)*r, y + Math.sin(i*0.62)*r);
-                }
-            } else if(t.shape === "spider") {
-                for(let i=0; i<8; i++) {
-                    ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(i*0.78)*t.r*1.4, y+Math.sin(i*0.78)*t.r*1.4);
-                }
-                ctx.arc(x,y, t.r*0.8, 0, 7);
-            } else { ctx.arc(x,y, t.r, 0, 7); }
-            ctx.fill(); ctx.stroke();
-        }
-
         canvas.addEventListener('mousedown', e => {
-            if(gameStatus !== "PLAYING" || !ammo) return;
+            if(!gameActive || !ammo) return;
             const p = toVirtual(e.clientX, e.clientY);
             if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 50) isDragging = true;
         });
         window.addEventListener('mousemove', e => { if(isDragging) mousePos = toVirtual(e.clientX, e.clientY); });
         window.addEventListener('mouseup', () => {
-            if(!isDragging) return;
-            isDragging = false;
+            if(!isDragging) return; isDragging = false;
             ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
             ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
             ammo.active = true;
         });
 
-        // Touch support
         canvas.addEventListener('touchstart', e => {
-            if(gameStatus !== "PLAYING" || !ammo) return;
+            if(!gameActive || !ammo) return;
             const p = toVirtual(e.touches[0].clientX, e.touches[0].clientY);
             if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 50) isDragging = true;
         });
         window.addEventListener('touchmove', e => { if(isDragging) mousePos = toVirtual(e.touches[0].clientX, e.touches[0].clientY); });
         window.addEventListener('touchend', () => {
-            if(!isDragging) return;
-            isDragging = false;
+            if(!isDragging) return; isDragging = false;
             ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
             ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
             ammo.active = true;
