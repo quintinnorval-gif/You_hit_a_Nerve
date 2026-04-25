@@ -51,9 +51,9 @@
         
         const GRAVITY = 0.22;
         const CELL_TYPES = {
-            OLIGO: { name: "Oligodendrocyte", r: 24, color: "#9c27b0", shape: "spider", power: 0.14 },
-            ASTRO: { name: "Astrocyte", r: 22, color: "#ff9800", shape: "star", power: 0.18 },
-            MICRO: { name: "Microglia", r: 18, color: "#f44336", shape: "pulse", power: 0.24 }
+            OLIGO: { name: "Oligodendrocyte", r: 24, color: "#9c27b0", shape: "spider", power: 0.16 },
+            ASTRO: { name: "Astrocyte", r: 22, color: "#ff9800", shape: "star", power: 0.20 },
+            MICRO: { name: "Microglia", r: 18, color: "#f44336", shape: "pulse", power: 0.26 }
         };
 
         const questionPool = [
@@ -108,12 +108,10 @@
         }
 
         function startDefense() {
-            // Shuffle pool at start
             shuffleDeck = [...questionPool].sort(() => Math.random() - 0.5);
             gameStatus = "SETTLING";
             quizBox.classList.add('hidden');
             initCitadel();
-            // Wait for blocks to fall before enabling sling
             setTimeout(() => { 
                 if(gameStatus === "SETTLING") { 
                     gameStatus = "PLAYING"; 
@@ -274,7 +272,8 @@
         const handleInputStart = (ex, ey) => {
             if(gameStatus !== "PLAYING" || !ammo) return;
             const p = toVirtual(ex, ey);
-            if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 60) {
+            // Increased grab radius for fingers
+            if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 100) {
                 isDragging = true;
                 mousePos = p;
             }
@@ -286,6 +285,7 @@
 
         const handleInputEnd = () => {
             if(!isDragging) return; isDragging = false;
+            // Force adjustment for mobile aspect ratios
             ammo.vx = (slingPos.x - mousePos.x) * ammo.type.power;
             ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
             ammo.active = true;
@@ -295,8 +295,14 @@
         window.addEventListener('mousemove', e => handleInputMove(e.clientX, e.clientY));
         window.addEventListener('mouseup', handleInputEnd);
 
-        canvas.addEventListener('touchstart', e => handleInputStart(e.touches[0].clientX, e.touches[0].clientY));
-        window.addEventListener('touchmove', e => handleInputMove(e.touches[0].clientX, e.touches[0].clientY));
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault(); // Stop mobile scrolling while playing
+            handleInputStart(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            handleInputMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
         window.addEventListener('touchend', handleInputEnd);
 
         function updateUI() { document.getElementById('block-count').innerText = blocks.filter(b=>b.alive).length; }
