@@ -18,7 +18,6 @@
         }
         .hidden { display: none !important; }
         #ui { position: absolute; top: 15px; left: 15px; font-weight: bold; pointer-events: none; background: rgba(255,255,255,0.8); padding: 10px; border-radius: 10px; border: 2px solid #2196F3; }
-        #victory-box h1 { color: #4CAF50; margin-top: 0; }
     </style>
 </head>
 <body>
@@ -34,8 +33,8 @@
     </div>
 
     <div id="victory-box" class="hidden">
-        <h1>VICTORY!</h1>
-        <p>The King's citadel has been dismantled by your knowledge.</p>
+        <h1 style="color:#4CAF50">VICTORY!</h1>
+        <p>The King has been dethroned!</p>
         <button onclick="resetGame()">Play Again</button>
     </div>
 
@@ -48,7 +47,7 @@
         const victoryBox = document.getElementById('victory-box');
 
         const VW = 1000, VH = 600;
-        let scale = 1, gameActive = true;
+        let scale = 1, gameStatus = "MENU"; // MENU, SETTLING, PLAYING, WON
         
         const GRAVITY = 0.22;
         const CELL_TYPES = {
@@ -61,13 +60,13 @@
             { q: "Which meningeal layer is in direct contact with brain tissue?", a: ["Dura mater", "Arachnoid mater", "Pia mater"], c: 2, type: "OLIGO" },
             { q: "The subarachnoid space contains:", a: ["Blood", "CSF", "Air"], c: 1, type: "ASTRO" },
             { q: "Which cell maintains the Blood-Brain Barrier?", a: ["Astrocyte", "Microglia", "Neuron"], c: 0, type: "ASTRO" },
-            { q: "The postcentral gyrus contains the:", a: ["Motor cortex", "Somatosensory cortex", "Visual cortex"], c: 1, type: "ASTRO" },
-            { q: "Cranial Nerve X (10), which wanders to the thorax, is the:", a: ["Vagus", "Trigeminal", "Abducens"], c: 0, type: "MICRO" }
+            { q: "Which cell produces myelin in the CNS?", a: ["Schwann", "Oligodendrocyte", "Astrocyte"], c: 1, type: "OLIGO" },
+            { q: "The primary motor cortex is in which lobe?", a: ["Frontal", "Parietal", "Occipital"], c: 0, type: "ASTRO" }
         ];
 
         let blocks = [], particles = [], ammo = null, shuffleDeck = [];
         let isDragging = false, mousePos = {x:0, y:0};
-        let king = { x: 0, y: 0, r: 35, vy: 0 };
+        let king = { x: 0, y: -100, r: 35, vy: 0 };
         const slingPos = { x: 180, y: VH - 180 };
 
         function resize() {
@@ -84,19 +83,19 @@
         }
 
         function startDefense() {
-            gameActive = true;
+            gameStatus = "SETTLING";
             quizBox.classList.add('hidden');
             initCitadel();
-            nextQuestion();
+            setTimeout(() => { if(gameStatus === "SETTLING") { gameStatus = "PLAYING"; nextQuestion(); } }, 2000);
         }
 
         function resetGame() { location.reload(); }
 
         function initCitadel() {
-            blocks = []; king.vy = 0;
+            blocks = []; king.y = -100; king.vy = 0;
             for(let i=0; i<5; i++) {
                 for(let j=0; j<2; j++) {
-                    blocks.push({ x: VW-250+(j*65), y: VH - 110 - (i*60), w: 55, h: 55, alive: true, col: j });
+                    blocks.push({ x: VW-250+(j*65), y: -100 - (i*60), w: 55, h: 55, alive: true, col: j });
                 }
             }
             updateUI();
@@ -110,15 +109,13 @@
         }
 
         function nextQuestion() {
-            if (!gameActive) return;
+            if (gameStatus !== "PLAYING") return;
             if (shuffleDeck.length === 0) shuffleDeck = [...questionPool].sort(() => Math.random() - 0.5);
-            
             quizBox.classList.remove('hidden');
             const data = shuffleDeck.pop();
             document.getElementById('question').innerText = data.q;
             const opts = document.getElementById('options');
             opts.innerHTML = '';
-            
             data.a.forEach((ans, i) => {
                 const btn = document.createElement('button');
                 btn.innerText = ans;
@@ -151,10 +148,7 @@
                 }
             } else { ctx.arc(x, y, type.r, 0, 7); }
             ctx.fill(); ctx.stroke();
-
-            // Eyes
-            const r = type.r;
-            ctx.fillStyle = "black";
+            const r = type.r; ctx.fillStyle = "black";
             ctx.beginPath(); ctx.arc(x - r/3, y - r/5, r/6, 0, 7); ctx.fill();
             ctx.beginPath(); ctx.arc(x + r/3, y - r/5, r/6, 0, 7); ctx.fill();
             if(isAngry) {
@@ -168,24 +162,12 @@
             ctx.fillStyle = "#9c27b0"; ctx.beginPath(); ctx.arc(k.x, k.y, k.r, 0, 7); ctx.fill();
             ctx.fillStyle = "gold"; ctx.fillRect(k.x-15, k.y-45, 30, 15);
             ctx.fillStyle = "white";
-            ctx.beginPath(); ctx.arc(k.x - 10, k.y - 5, 8, 0, 7); ctx.fill();
-            ctx.beginPath(); ctx.arc(k.x + 10, k.y - 5, 8, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(k.x-10, k.y-5, 8, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(k.x+10, k.y-5, 8, 0, 7); ctx.fill();
             ctx.fillStyle = "black";
-            ctx.beginPath(); ctx.arc(k.x - 10, k.y - 5, 3, 0, 7); ctx.fill();
-            ctx.beginPath(); ctx.arc(k.x + 10, k.y - 5, 3, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(k.x-10, k.y-5, 3, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(k.x+10, k.y-5, 3, 0, 7); ctx.fill();
             ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(k.x, k.y+10, 10, 3.5, 5.8); ctx.stroke();
-        }
-
-        function triggerExplosion() {
-            gameActive = false;
-            for(let i=0; i<80; i++) {
-                particles.push({
-                    x: king.x, y: king.y,
-                    vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15,
-                    size: Math.random()*5+2, color: `hsl(${Math.random()*360}, 70%, 60%)`
-                });
-            }
-            setTimeout(() => { victoryBox.classList.remove('hidden'); }, 1200);
         }
 
         function update() {
@@ -194,17 +176,17 @@
             ctx.translate((canvas.width - VW*scale)/2, (canvas.height - VH*scale)/2);
             ctx.scale(scale, scale);
 
-            // Scenery
+            // Ground & Sling
             ctx.fillStyle = "#5d4037"; ctx.fillRect(-500, VH-50, VW+1000, 500); 
             ctx.strokeStyle = "#3e2723"; ctx.lineWidth = 8; ctx.beginPath();
             ctx.moveTo(slingPos.x, VH-50); ctx.lineTo(slingPos.x, slingPos.y+20); ctx.stroke();
 
-            // Block Physics
+            // Blocks
             blocks.forEach(b => {
                 if(!b.alive) return;
                 const colBlocks = blocks.filter(bl => bl.col === b.col && bl.alive).sort((a,b) => b.y - a.y);
                 const targetY = VH - 105 - (colBlocks.indexOf(b)*58);
-                if(b.y < targetY) b.y += 8; else b.y = targetY;
+                if(b.y < targetY) b.y += 7; else b.y = targetY;
                 ctx.fillStyle = "#78909c"; ctx.fillRect(b.x, b.y, b.w, b.h);
                 ctx.strokeStyle = "#263238"; ctx.strokeRect(b.x, b.y, b.w, b.h);
             });
@@ -217,13 +199,17 @@
                 else { king.y = top.y - 40; king.vy = 0; }
             } else { king.vy += GRAVITY; king.y += king.vy; }
 
-            if(gameActive) {
+            if(gameStatus !== "WON") {
                 drawKing(king);
-                if(king.y > VH-85) triggerExplosion();
+                if(gameStatus === "PLAYING" && king.y > VH-85) {
+                    gameStatus = "WON";
+                    for(let i=0; i<60; i++) particles.push({ x: king.x, y: king.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, size: Math.random()*5+2, color: `hsl(${Math.random()*360}, 70%, 60%)` });
+                    setTimeout(() => victoryBox.classList.remove('hidden'), 1000);
+                }
             }
 
-            // Ammo
-            if(ammo && gameActive) {
+            // Ammo & Trajectory
+            if(ammo && gameStatus === "PLAYING") {
                 if(isDragging) {
                     ctx.beginPath(); ctx.setLineDash([5, 5]); ctx.strokeStyle = "white";
                     let px = slingPos.x, py = slingPos.y, pvx = (slingPos.x-mousePos.x)*ammo.type.power, pvy = (slingPos.y-mousePos.y)*ammo.type.power;
@@ -234,9 +220,7 @@
                     ammo.vy += GRAVITY; ammo.x += ammo.vx; ammo.y += ammo.vy;
                     drawCell(ammo.type, ammo.x, ammo.y, true);
                     blocks.forEach(b => {
-                        if(b.alive && ammo.x > b.x && ammo.x < b.x+b.w && ammo.y > b.y && ammo.y < b.y+b.h) {
-                            b.alive = false; updateUI();
-                        }
+                        if(b.alive && ammo.x > b.x && ammo.x < b.x+b.w && ammo.y > b.y && ammo.y < b.y+b.h) { b.alive = false; updateUI(); }
                     });
                     if(ammo.y > VH || ammo.x > VW || ammo.x < 0) { ammo = null; setTimeout(nextQuestion, 600); }
                 } else { drawCell(ammo.type, slingPos.x, slingPos.y, false); }
@@ -253,9 +237,9 @@
         }
 
         canvas.addEventListener('mousedown', e => {
-            if(!gameActive || !ammo) return;
+            if(gameStatus !== "PLAYING" || !ammo) return;
             const p = toVirtual(e.clientX, e.clientY);
-            if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 50) isDragging = true;
+            if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 60) isDragging = true;
         });
         window.addEventListener('mousemove', e => { if(isDragging) mousePos = toVirtual(e.clientX, e.clientY); });
         window.addEventListener('mouseup', () => {
@@ -264,11 +248,11 @@
             ammo.vy = (slingPos.y - mousePos.y) * ammo.type.power;
             ammo.active = true;
         });
-
+        // Same for touch...
         canvas.addEventListener('touchstart', e => {
-            if(!gameActive || !ammo) return;
+            if(gameStatus !== "PLAYING" || !ammo) return;
             const p = toVirtual(e.touches[0].clientX, e.touches[0].clientY);
-            if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 50) isDragging = true;
+            if(Math.hypot(p.x-slingPos.x, p.y-slingPos.y) < 60) isDragging = true;
         });
         window.addEventListener('touchmove', e => { if(isDragging) mousePos = toVirtual(e.touches[0].clientX, e.touches[0].clientY); });
         window.addEventListener('touchend', () => {
